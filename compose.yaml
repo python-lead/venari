@@ -1,6 +1,6 @@
 services:
   venari:
-    build: venari
+    build: .
     develop:
       watch:
         - action: sync+restart
