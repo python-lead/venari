@@ -8,10 +8,23 @@
 
 ## Table of contents
 * [General info](#general-info)
+* [Project setup](#project-setup)
+* [How to run the app](#how-to-start)
 
 ## General info
 Scrapper tool created to streamline job offer viewing.
 The goal is to fetch new offers daily, manipulate data to use same units and maybe do some automation later on
+
+## Project setup
+```bash
+$ docker compose build
+```
+
+## How to start
+```bash
+$ docker compose up
+```
+
 
 ## tools used:
 

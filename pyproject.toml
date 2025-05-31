@@ -13,8 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-start = "venari:main"
-
+start = "venari.main:main"
 
 [build-system]
 requires = ["hatchling"]
