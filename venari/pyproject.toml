@@ -1,0 +1,21 @@
+[project]
+name = "venari"
+version = "0.1.0"
+description = "Job hunting scrapper tool"
+readme = "README.md"
+authors = [
+    { name = "Dawid", email = "rygula.dawid@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.13.4",
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+start = "venari:main"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

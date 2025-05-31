@@ -1,0 +1,16 @@
+services:
+  venari:
+    build: venari
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: .
+          ignore:
+            - .venv/
+            - __pycache__/
+        - action: rebuild
+          path: ./pyproject.toml
+    command: ["sh", "-c", "echo 'Run `start` script' && exec uv run start"]
+    environment:
+      - PYTHONUNBUFFERED=1
