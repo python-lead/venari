@@ -1,5 +1,7 @@
+import asyncio
 import logging
-from time import sleep
+
+from venari.engine import Engine
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -7,13 +9,16 @@ logging.basicConfig(
 )
 
 
+async def _main_loop() -> None:
+    engine = Engine(logger=logger)
+    await engine.execute()
+
+
 def main() -> None:
     logger.info("Hello venari!")
     try:
-        while True:
-            logger.info(".")
-            sleep(2)
+        asyncio.run(_main_loop())
     except KeyboardInterrupt:
-        pass
+        logger.warning("Got request to terminate, exiting...")
     finally:
         logger.info("Exiting venari main!")
