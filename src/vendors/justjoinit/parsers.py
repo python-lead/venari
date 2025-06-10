@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 
 from venari.models import JobOffer, SalaryRange
 from vendors.parser_interfaces import OfferParserInterface
+from vendors.utils import try_int
 
 
 class JustJoinItParser(OfferParserInterface):
@@ -30,10 +31,7 @@ class JustJoinItParser(OfferParserInterface):
             span_data = [x.get_text(strip=True) for x in offer.select("span")]
 
             job_offer = self._get_span_data(
-                span_data=span_data,
-                title=title,
-                url=full_url,
-                logo_url=logo_url
+                span_data=span_data, title=title, url=full_url, logo_url=logo_url
             )
             offers.append(job_offer)
 
@@ -44,23 +42,8 @@ class JustJoinItParser(OfferParserInterface):
         span_data: List[str],
         title: Optional[str],
         url: str,
-        logo_url: Optional[str]
+        logo_url: Optional[str],
     ) -> JobOffer:
-
-        def try_int(val: str) -> Optional[int]:
-            try:
-                return int(val.replace(" ", "").replace("K", "000"))
-            except Exception:
-                return None
-
-        def to_hourly(min_val: int, max_val: int, unit: str) -> tuple[Optional[int], Optional[int]]:
-            """Converts salary to hourly if unit is monthly."""
-            if "month" in unit.lower():
-                return min_val // 160, max_val // 160
-            elif "hour" in unit.lower():
-                return min_val, max_val
-            return None, None
-
         salary = None
         org = loc = None
         remote = False
@@ -72,7 +55,7 @@ class JustJoinItParser(OfferParserInterface):
             raw_min = try_int(span_data[0])
             raw_max = try_int(span_data[1])
             unit = span_data[2]
-            h_min, h_max = to_hourly(raw_min, raw_max, unit)
+            h_min, h_max = self._to_hourly(raw_min, raw_max, unit)
             if h_min and h_max:
                 salary = SalaryRange(min=h_min, max=h_max, currency="PLN")
             else:
@@ -96,5 +79,16 @@ class JustJoinItParser(OfferParserInterface):
             location=loc,
             remote=remote,
             salary=salary,
-            raw_span_data=span_data
+            raw_span_data=span_data,
         )
+
+    @staticmethod
+    def _to_hourly(
+        min_val: int, max_val: int, unit: str
+    ) -> tuple[Optional[int], Optional[int]]:
+        """Converts salary to hourly if unit is monthly."""
+        if "/month" in unit.lower():
+            return min_val // 160, max_val // 160
+        elif "/h" in unit.lower():
+            return min_val, max_val
+        return None, None

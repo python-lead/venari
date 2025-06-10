@@ -9,6 +9,7 @@ class Engine(EngineInterface):
     """
     Scrapper execution engine
     """
+
     def __init__(self, logger: Logger) -> None:
         self.logger = logger
         self.offers: list[JobOffer] | None = None

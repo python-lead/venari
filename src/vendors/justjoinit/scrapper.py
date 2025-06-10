@@ -7,10 +7,13 @@ from vendors.justjoinit.parsers import JustJoinItParser
 
 
 class JustJoinItScrapper:
+    # todo: add interface for Scrapper
     def __init__(self, logger: Logger):
         self.logger = logger
         self.BASE_URL = "https://justjoin.it"
-        self._OFFER_PAGE_URL = "https://justjoin.it/job-offers/all-locations/python?remote=yes&from=1"
+        self._OFFER_PAGE_URL = (
+            "https://justjoin.it/job-offers/all-locations/python?remote=yes&from=1"
+        )
         self.offer_parser = JustJoinItParser(base_url=self.BASE_URL, logger=logger)
 
     async def get_offers(self) -> list[JobOffer]:

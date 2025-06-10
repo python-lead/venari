@@ -6,6 +6,7 @@ class SalaryRange(BaseModel):
     """
     Stores salary range as currency per hour
     """
+
     min: Optional[int] = None
     max: Optional[int] = None
     currency: Optional[str] = "PLN"
