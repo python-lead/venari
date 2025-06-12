@@ -1,7 +1,9 @@
 from logging import Logger
+from typing import List
 
 from venari.engine_interface import EngineInterface
 from venari.models import JobOffer
+from venari.offer_filters import FilterInterface
 from vendors.justjoinit.scrapper import JustJoinItScrapper
 
 
@@ -14,13 +16,13 @@ class Engine(EngineInterface):
         self.logger = logger
         self.offers: list[JobOffer] | None = None
         # todo: include ability to add filter backends for offers
-        self.offer_filters = NotImplemented
+        self.offer_filters: List[FilterInterface] = []
 
     async def execute(self) -> None:
         # todo: implement better support for multiple scrappers
         scrapper = JustJoinItScrapper(logger=self.logger)
         self.offers = await scrapper.get_offers()
-
+        self.filter_offers()
         self.display_offers()
 
     def display_offers(self):

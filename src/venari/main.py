@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from venari.engine import Engine
+from venari.offer_filters import MinimumWage100, IgnoreAIOffers
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -11,6 +12,8 @@ logging.basicConfig(
 
 async def _main_loop() -> None:
     engine = Engine(logger=logger)
+    offer_filters = (IgnoreAIOffers, MinimumWage100)
+    engine.add_filters(filters=offer_filters)
     await engine.execute()
 
 
