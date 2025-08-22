@@ -13,7 +13,7 @@ class EngineInterface(ABC):
 
     @abstractmethod
     async def execute(self) -> None:
-        pass
+        ...
 
     def add_filters(self, filters: Sequence[Type[FilterInterface]]) -> None:
         self.offer_filters.extend(filters)

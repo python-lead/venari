@@ -5,7 +5,6 @@ from venari.models import JobOffer
 
 class FilterInterface(ABC):
     @staticmethod
-    @abstractmethod
     def filter_offer(offer: JobOffer) -> bool:
         return True
 
