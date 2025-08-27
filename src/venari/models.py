@@ -1,4 +1,7 @@
-from typing import Optional, List
+import datetime
+import pprint
+from typing import Optional, List, Dict
+
 from pydantic import BaseModel, HttpUrl
 
 
@@ -25,20 +28,35 @@ class SalaryRange(BaseModel):
         return f"{min}-{max} {self.currency}/M"
 
 
+class JobOfferDetails(BaseModel):
+    organisation_info: Optional[str]
+    tech_stack: Optional[Dict[str, str]]
+    job_summary: Optional[str]
+    published_date: Optional[datetime.date]
+    source_url: Optional[HttpUrl]
+
+    def display(self) -> None:
+        print("TECH STACK:")
+        pprint.pp(self.tech_stack, compact=True)
+        print("\nSUMMARY:")
+        pprint.pp(self.job_summary, compact=True)
+
+
 class JobOffer(BaseModel):
     title: Optional[str]
     url: Optional[HttpUrl]
-    logo: Optional[HttpUrl]
-
     organisation_name: Optional[str]
     location: Optional[str]
-    remote: Optional[bool] = False
-
-    salary: Optional[SalaryRange]
-
     raw_span_data: List[str]
+    logo: Optional[HttpUrl] = None
+    remote: Optional[bool] = False
+    salary: Optional[SalaryRange] = None
+    details: Optional[JobOfferDetails] = None
 
     def __repr__(self) -> str:
         if self.salary:
             return f"{self.salary.hourly()} {self.title} @ {self.organisation_name} [{self.location}]"
         return f"{self.title} @ {self.organisation_name} [{self.location}]"
+
+    def display(self) -> None:
+        print(f"{self.title} @ {self.organisation_name} - {self.salary.monthly()}")
