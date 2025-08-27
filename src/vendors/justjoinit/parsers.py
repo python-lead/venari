@@ -1,18 +1,36 @@
+from datetime import datetime
 from logging import Logger
 from typing import List, Optional
 from urllib.parse import urljoin
+import re
 
 from bs4 import BeautifulSoup
 
-from venari.models import JobOffer, SalaryRange
+from venari.models import JobOffer, SalaryRange, JobOfferDetails
 from vendors.parser_interfaces import OfferParserInterface
 from vendors.utils import try_int
 
 
 class JustJoinItParser(OfferParserInterface):
+    ACCEPTABLE_LEVELS = {
+        "nice to have",
+        "regular",
+        "advanced",
+        "junior",
+        "master",
+        "c1",
+        "c2",
+        "b2",
+        "a1",
+        "a2",
+        "b1",
+    }
+
     def __init__(self, base_url: str, logger: Logger) -> None:
         self.BASE_URL = base_url
         self.logger = logger
+        # Contains values from tech stack that were not accepted. 
+        self.rejected_tech_stack_values: set[tuple[str, str]] = set()
 
     async def parse_offers(self, content: str) -> list[JobOffer]:
         soup = BeautifulSoup(content, "html.parser")
@@ -92,3 +110,72 @@ class JustJoinItParser(OfferParserInterface):
         elif "/h" in unit.lower():
             return min_val, max_val
         return None, None
+
+    async def parse_details(
+            self,
+            content: str,
+            url: Optional[str] = None,
+            offer: Optional[JobOffer] = None
+    ) -> JobOfferDetails:
+        """
+        Parse detailed information from a job offer page.
+        Current implementation supports parsing job postings based on templates observed at Aug 2025.
+        """
+        soup = BeautifulSoup(content, "html.parser")
+        full_text = soup.get_text(separator="\n", strip=True)
+
+        # Extract organisation info
+        org_section = None
+        pattern = r"Meet the company\s*(.*?)\s*(?:Company profile|Office location)"
+        match = re.search(pattern, full_text, flags=re.DOTALL | re.IGNORECASE)
+        if match:
+            org_section = match.group(1).strip()
+
+        # Trim organisation name if duplicated at start
+        if offer and offer.organisation_name and org_section:
+            prefix = f"{offer.organisation_name}\n"
+            if org_section.startswith(prefix):
+                org_section = org_section[len(prefix):].lstrip()
+
+        # Extract raw tech stack pairs
+        raw_stack = []
+        for container in soup.find_all("div"):
+            tech_name = container.find("h4")
+            level = container.find("span")
+            if tech_name and level:
+                raw_stack.append((tech_name.get_text(strip=True), level.get_text(strip=True)))
+
+        # Clean and normalize tech stack
+        tech_stack: dict[str, str] = {}
+        for tech, level in raw_stack:
+            tech_clean = tech.strip()
+            level_clean = level.strip().lower()
+            if level_clean in self.ACCEPTABLE_LEVELS:
+                tech_stack[tech_clean] = level_clean  # overwrite duplicates
+            else:
+                self.rejected_tech_stack_values.add((tech_clean, level.strip()))  # deduplicated by set
+
+        # Extract job summary
+        job_summary = None
+        summary_match = re.search(
+            r"Job description(.*?)(Published:\s*\d{2}\.\d{2}\.\d{4})",
+            full_text, re.DOTALL
+            )
+        if summary_match:
+            block = summary_match.group(1).strip()
+            # Keep formatting (including bullets and line breaks)
+            job_summary = block
+
+        # Extract published date separately
+        published_date = None
+        pub_match = re.search(r"Published:\s*(\d{2}\.\d{2}\.\d{4})", full_text)
+        if pub_match:
+            published_date = datetime.strptime(pub_match.group(1), "%d.%m.%Y").date()
+
+        return JobOfferDetails(
+            organisation_info=org_section,
+            tech_stack=tech_stack,
+            job_summary=job_summary,
+            published_date=published_date,
+            source_url=url,
+        )
