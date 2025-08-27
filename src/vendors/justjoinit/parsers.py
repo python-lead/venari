@@ -29,7 +29,7 @@ class JustJoinItParser(OfferParserInterface):
     def __init__(self, base_url: str, logger: Logger) -> None:
         self.BASE_URL = base_url
         self.logger = logger
-        # Contains values from tech stack that were not accepted. 
+        # Contains values from tech stack that were not accepted.
         self.rejected_tech_stack_values: set[tuple[str, str]] = set()
 
     async def parse_offers(self, content: str) -> list[JobOffer]:
@@ -112,10 +112,7 @@ class JustJoinItParser(OfferParserInterface):
         return None, None
 
     async def parse_details(
-            self,
-            content: str,
-            url: Optional[str] = None,
-            offer: Optional[JobOffer] = None
+        self, content: str, url: Optional[str] = None, offer: Optional[JobOffer] = None
     ) -> JobOfferDetails:
         """
         Parse detailed information from a job offer page.
@@ -135,7 +132,7 @@ class JustJoinItParser(OfferParserInterface):
         if offer and offer.organisation_name and org_section:
             prefix = f"{offer.organisation_name}\n"
             if org_section.startswith(prefix):
-                org_section = org_section[len(prefix):].lstrip()
+                org_section = org_section[len(prefix) :].lstrip()
 
         # Extract raw tech stack pairs
         raw_stack = []
@@ -143,7 +140,9 @@ class JustJoinItParser(OfferParserInterface):
             tech_name = container.find("h4")
             level = container.find("span")
             if tech_name and level:
-                raw_stack.append((tech_name.get_text(strip=True), level.get_text(strip=True)))
+                raw_stack.append(
+                    (tech_name.get_text(strip=True), level.get_text(strip=True))
+                )
 
         # Clean and normalize tech stack
         tech_stack: dict[str, str] = {}
@@ -153,14 +152,15 @@ class JustJoinItParser(OfferParserInterface):
             if level_clean in self.ACCEPTABLE_LEVELS:
                 tech_stack[tech_clean] = level_clean  # overwrite duplicates
             else:
-                self.rejected_tech_stack_values.add((tech_clean, level.strip()))  # deduplicated by set
+                self.rejected_tech_stack_values.add((tech_clean, level.strip()))
 
         # Extract job summary
         job_summary = None
         summary_match = re.search(
             r"Job description(.*?)(Published:\s*\d{2}\.\d{2}\.\d{4})",
-            full_text, re.DOTALL
-            )
+            full_text,
+            re.DOTALL,
+        )
         if summary_match:
             block = summary_match.group(1).strip()
             # Keep formatting (including bullets and line breaks)

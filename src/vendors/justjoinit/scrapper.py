@@ -22,9 +22,11 @@ class JustJoinItScrapper(OfferScrapperInterface):
 
     async def get_offer_details(self, offer: JobOffer) -> JobOfferDetails:
         detail_page = await self._fetch_content_page(url=str(offer.url))
-        details = await self.offer_parser.parse_details(content=detail_page, url=offer.url, offer=offer)
+        details = await self.offer_parser.parse_details(
+            content=detail_page, url=offer.url, offer=offer
+        )
         details.source_url = offer.url
-        details.display()
+
         return details
 
     @staticmethod
