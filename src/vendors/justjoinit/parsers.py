@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from venari.models import JobOffer, SalaryRange, JobOfferDetails
 from vendors.parser_interfaces import OfferParserInterface
-from vendors.utils import try_int
+from vendors.utils import try_int, convert_salary_to_hourly_range
 
 
 class JustJoinItParser(OfferParserInterface):
@@ -46,10 +46,23 @@ class JustJoinItParser(OfferParserInterface):
             logo_tag = offer.select_one("img")
             logo_url = logo_tag.get("src") if logo_tag else None
 
+            org_tag = offer.select_one(
+                "p.MuiTypography-root.MuiTypography-body1.mui-1jo71uz"
+            )
+            if org_tag:
+                organisation_name = org_tag.get_text(strip=True)
+            else:
+                organisation_name = None
+                self.logger.warning(f"Org tag not found for: {title}")
+
             span_data = [x.get_text(strip=True) for x in offer.select("span")]
 
             job_offer = self._get_span_data(
-                span_data=span_data, title=title, url=full_url, logo_url=logo_url
+                span_data=span_data,
+                title=title,
+                url=full_url,
+                logo_url=logo_url,
+                organisation_name=organisation_name,
             )
             offers.append(job_offer)
 
@@ -61,29 +74,31 @@ class JustJoinItParser(OfferParserInterface):
         title: Optional[str],
         url: str,
         logo_url: Optional[str],
+        organisation_name: Optional[str],
     ) -> JobOffer:
         salary = None
-        org = loc = None
+        loc = None
         remote = False
 
         remainder = span_data
 
         # Check for salary in first 3 items
-        if len(span_data) >= 3 and try_int(span_data[0]) and try_int(span_data[1]):
-            raw_min = try_int(span_data[0])
-            raw_max = try_int(span_data[1])
-            unit = span_data[2]
-            h_min, h_max = self._to_hourly(raw_min, raw_max, unit)
+        if (
+            len(span_data) >= 3
+            and try_int(span_data[1]) is not None
+            and try_int(span_data[2]) is not None
+        ):
+            raw_min = try_int(span_data[1])
+            raw_max = try_int(span_data[2])
+            unit = span_data[3]
+            h_min, h_max = convert_salary_to_hourly_range(raw_min, raw_max, unit)
             if h_min and h_max:
                 salary = SalaryRange(min=h_min, max=h_max, currency="PLN")
             else:
-                # todo: figure out why data is missing even if condition is met
-                self.logger.warning(f"Missing salary range for: {title}")
+                self.logger.warning(f"Missing salary range for: {title} - {span_data}")
                 salary = None
             remainder = span_data[3:]
 
-        if remainder:
-            org = remainder[0]
         if len(remainder) > 1:
             loc = remainder[1]
         if any("remote" in x.lower() for x in remainder):
@@ -93,30 +108,19 @@ class JustJoinItParser(OfferParserInterface):
             title=title,
             url=url,
             logo=logo_url,
-            organisation_name=org,
+            organisation_name=organisation_name,
             location=loc,
             remote=remote,
             salary=salary,
             raw_span_data=span_data,
         )
 
-    @staticmethod
-    def _to_hourly(
-        min_val: int, max_val: int, unit: str
-    ) -> tuple[Optional[int], Optional[int]]:
-        """Converts salary to hourly if unit is monthly."""
-        if "/month" in unit.lower():
-            return min_val // 160, max_val // 160
-        elif "/h" in unit.lower():
-            return min_val, max_val
-        return None, None
-
     async def parse_details(
         self, content: str, url: Optional[str] = None, offer: Optional[JobOffer] = None
     ) -> JobOfferDetails:
         """
-        Parse detailed information from a job offer page.
-        Current implementation supports parsing job postings based on templates observed at Aug 2025.
+        Parse detailed information from a job offer page
+        Current implementation supports parsing job postings based on templates observed at Aug 2025
         """
         soup = BeautifulSoup(content, "html.parser")
         full_text = soup.get_text(separator="\n", strip=True)
@@ -164,7 +168,11 @@ class JustJoinItParser(OfferParserInterface):
         if summary_match:
             block = summary_match.group(1).strip()
             # Keep formatting (including bullets and line breaks)
-            job_summary = block
+            summary_ending_index = block.find("Tech stack\n")
+            if summary_ending_index:
+                job_summary = block[:summary_ending_index]
+            else:
+                job_summary = block
 
         # Extract published date separately
         published_date = None
