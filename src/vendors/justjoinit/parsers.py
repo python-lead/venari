@@ -66,6 +66,9 @@ class JustJoinItParser(OfferParserInterface):
             )
             offers.append(job_offer)
 
+        if not offers:
+            self.logger.info(f"{self.__class__.__name__}: Detected a page with no offers!")
+
         return offers
 
     def _get_span_data(
