@@ -7,26 +7,34 @@ from venari.models import JobOffer
 from venari.offer_filters import FilterInterface
 from vendors.scrapper_interfaces import OfferScrapperInterface
 
+import webbrowser
+
 
 class Engine(EngineInterface):
     """
     Scrapper execution engine
-    todo:
-    - todo: implement support for multiple scrappers
     """
 
     def __init__(
-        self, logger: Logger, scrapper: OfferScrapperInterface, skip_details=False
+        self,
+        logger: Logger,
+        scrapper: OfferScrapperInterface,
+        skip_details=False,
+        order_offers: bool = True,
+        open_offers_in_browser: bool = False,
     ) -> None:
         self.logger = logger
         self.offer_filters: List[FilterInterface] = []
         self.scrapper = scrapper
         self._skip_details = skip_details
+        self._open_offers_in_browser = open_offers_in_browser
+        self._order_offers = order_offers
 
     async def execute(self) -> None:
         self.offers = await self._get_offers()
         self.filter_offers()
-        self.filtered_offers = self._order_offers(self.filtered_offers)
+        if self._order_offers:
+            self.filtered_offers = self._order_filtered_offers(self.filtered_offers)
         self._display_offers()
 
     async def _get_offers(self) -> list[JobOffer]:
@@ -68,18 +76,22 @@ class Engine(EngineInterface):
         )
 
         if self.filtered_offers:
-            if self._skip_details:
-                for offer in self.filtered_offers:
-                    offer.display()
-            else:
-                for offer in self.filtered_offers:
-                    offer.display()
+            for offer in self.filtered_offers:
+                offer.display()
 
-    def _order_offers(self, offers: List[JobOffer]) -> List[JobOffer]:
+                if self._open_offers_in_browser:
+                    self._open_browser_page_test(str(offer.url))
+
+        self.logger.info(
+            f"Displayed acceptable offers - "
+            f"{f'{len(self.filtered_offers)} out of {len(self.offers)}' if self.filtered_offers else 'No offers'}"
+        )
+
+    def _order_filtered_offers(self, offers: List[JobOffer]) -> List[JobOffer]:
         """
         Orders job offers by their maximum salary in descending order
-        # todo: Move to interface, allow ordering key as init param
         """
+        self.logger.info("Ordering offers by max salary")
         return sorted(
             offers,
             key=self._upper_offer_salary,
@@ -96,3 +108,7 @@ class Engine(EngineInterface):
 
         max_salary = getattr(offer.salary, "max", None)
         return max_salary if max_salary is not None else float(-1)
+
+    @staticmethod
+    def _open_browser_page_test(url: str) -> None:
+        webbrowser.open_new_tab(url)
