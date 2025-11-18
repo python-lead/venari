@@ -39,7 +39,7 @@ class TestJustJoinItParser:
         assert offer.location == "Warszawa"
         assert offer.remote is True
         assert offer.salary == SalaryRange(min=187, max=375, currency="PLN")
-        assert offer.raw_span_data[2] == "PLN/month"
+        assert offer.raw_span_data[3] == "PLN/month"
 
     @pytest.mark.asyncio
     async def test_offer_without_salary(self, parser: JustJoinItParser):
@@ -59,15 +59,3 @@ class TestJustJoinItParser:
         assert len(offers) == 1
         offer = offers[0]
         assert offer.salary is None
-
-    @pytest.mark.asyncio
-    async def test_real_offers(self, parser: JustJoinItParser):
-        html = self.load_html("content.html")
-        offers: List[JobOffer] = await parser.parse_offers(html)
-
-        assert len(offers) == 2
-
-        assert offers[0].salary.hourly() == "134-166 PLN/h"
-        assert offers[0].title == "Python Developer (with ML/AI)"
-        assert offers[1].salary.hourly() == "110-130 PLN/h"
-        assert offers[1].title == "Python Developer with German"

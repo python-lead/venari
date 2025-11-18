@@ -1,10 +1,15 @@
-from typing import Optional, List
+import datetime
+import pprint
+from typing import Optional, List, Dict
+
 from pydantic import BaseModel, HttpUrl
 
 
 class SalaryRange(BaseModel):
     """
     Stores salary range as currency per hour
+    - todo: Fix calculation saving issues. Example initial values '18 000', '20 000'
+        -> shows '17920-20000 PLN/M' when displayed with monthly()
     """
 
     min: Optional[int] = None
@@ -12,7 +17,7 @@ class SalaryRange(BaseModel):
     currency: Optional[str] = "PLN"
 
     def as_monthly(self) -> tuple[Optional[int], Optional[int]]:
-        """Convert hourly salary to monthly using 160 working hours/month."""
+        """Convert hourly salary to monthly using 160 working hours/month"""
         min_monthly = self.min * 160 if self.min is not None else None
         max_monthly = self.max * 160 if self.max is not None else None
         return min_monthly, max_monthly
@@ -25,20 +30,49 @@ class SalaryRange(BaseModel):
         return f"{min}-{max} {self.currency}/M"
 
 
-class JobOffer(BaseModel):
-    title: Optional[str]
-    url: Optional[HttpUrl]
-    logo: Optional[HttpUrl]
+class JobOfferDetails(BaseModel):
+    organisation_info: Optional[str]
+    tech_stack: Optional[Dict[str, str]]
+    job_summary: Optional[str]
+    published_date: Optional[datetime.date]
+    source_url: Optional[HttpUrl]
 
+    def display(self) -> None:
+        print(f"\nPUBLISHED AT: \n{self.published_date}")
+        print("\nTECH STACK:")
+        for requirement in self.tech_stack.keys():
+            print(f"  {requirement}: {self.tech_stack[requirement]}")
+        print("\nSUMMARY:")
+        summary = self.job_summary.replace("\n", " ")
+        pprint.pp(summary, compact=True, indent=2)
+
+
+class JobOffer(BaseModel):
+    rejected_by: Optional[str] = None
+    title: str
+    url: HttpUrl
     organisation_name: Optional[str]
     location: Optional[str]
-    remote: Optional[bool] = False
-
-    salary: Optional[SalaryRange]
-
     raw_span_data: List[str]
+    logo: Optional[HttpUrl] = None
+    remote: Optional[bool] = False
+    salary: Optional[SalaryRange] = None
+    details: Optional[JobOfferDetails] = None
 
     def __repr__(self) -> str:
         if self.salary:
             return f"{self.salary.hourly()} {self.title} @ {self.organisation_name} [{self.location}]"
-        return f"{self.title} @ {self.organisation_name} [{self.location}]"
+        return f"[Undisclosed Salary] {self.title} @ {self.organisation_name} [{self.location}]"
+
+    def display(self) -> None:
+        print(
+            f"• {self.organisation_name} - {self.title}\n"
+            f"{self.salary.hourly() if self.salary else None} - {self.tech_stack()}\n-> {self.url}"
+        )
+
+    def tech_stack(self) -> str | None:
+        if self.details:
+            return ", ".join(self.details.tech_stack.keys())
+
+    def __hash__(self):
+        return hash((self.url, self.title))

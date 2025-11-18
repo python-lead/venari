@@ -25,6 +25,16 @@ $ docker compose build
 $ docker compose up
 ```
 
+## Start Venari using uv:
+```bash
+$ uv run start
+```
+
+## Testing using pytest (with active venv): 
+```bash
+$ pytest
+```
+
 
 ## tools used:
 
