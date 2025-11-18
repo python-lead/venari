@@ -49,8 +49,8 @@ class JobOfferDetails(BaseModel):
 
 class JobOffer(BaseModel):
     rejected_by: Optional[str] = None
-    title: Optional[str]
-    url: Optional[HttpUrl]
+    title: str
+    url: HttpUrl
     organisation_name: Optional[str]
     location: Optional[str]
     raw_span_data: List[str]
@@ -66,9 +66,13 @@ class JobOffer(BaseModel):
 
     def display(self) -> None:
         print(
-            f"{self.salary.hourly() if self.salary else None} - {self.title} @ {self.organisation_name} {self.tech_stack()}\n{self.url}"
+            f"• {self.organisation_name} - {self.title}\n"
+            f"{self.salary.hourly() if self.salary else None} - {self.tech_stack()}\n-> {self.url}"
         )
 
     def tech_stack(self) -> str | None:
         if self.details:
-            return str({", ".join(self.details.tech_stack.keys())})
+            return ", ".join(self.details.tech_stack.keys())
+
+    def __hash__(self):
+        return hash((self.url, self.title))

@@ -8,6 +8,8 @@ from venari.offer_filters import (
     KnownSalary,
     IgnoreFrontendStack,
     IgnoreNonPythonBackends,
+    IgnoreBigData,
+    IgnoreRobotics,
 )
 from vendors.justjoinit.scrapper import JustJoinItScrapper
 
@@ -22,7 +24,11 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 async def _main_loop() -> None:
     engine = Engine(
-        logger=logger, scrapper=JustJoinItScrapper(logger=logger), skip_details=False
+        logger=logger,
+        scrapper=JustJoinItScrapper(logger=logger, max_pages=4),
+        skip_details=False,
+        order_offers=False,
+        open_offers_in_browser=True,
     )
     offer_filters = (
         KnownSalary,
@@ -30,6 +36,8 @@ async def _main_loop() -> None:
         IgnoreAIOffers,
         IgnoreFrontendStack,
         IgnoreNonPythonBackends,
+        IgnoreBigData,
+        IgnoreRobotics,
     )
     engine.add_filters(filters=offer_filters)
     await engine.execute()
