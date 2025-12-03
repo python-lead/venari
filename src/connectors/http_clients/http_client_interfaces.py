@@ -3,6 +3,7 @@ from typing import Protocol, Optional
 
 
 class Response(Protocol):
+    @property
     @abstractmethod
     def text(self) -> str: ...
 

@@ -38,14 +38,15 @@ class HttpxClient(ConnectorInterface, AsyncHttpClientInterface):
         backoff_factor: float = 0.3,
         logger: Optional[Logger] = None,
         enable_circuit_breaker: bool = True,
-        circuit_breaker_fail_threshold: int = 4,
+        circuit_breaker_opening_threshold: int = 4,
         circuit_breaker_reset_time: int = 10,
         circuit_breaker_max_reopens: int = 3,  # Terminate client threshold
         max_wait_for_open_circuit: int = 15,  # Maximal wait time for circuit to open
     ):
         """
-        circuit_breaker_opening_threshold: How many consecutive failures must happen before the circuit breaker opens
-        circuit_breaker_max_reopens: How many consecutive circuit breaker reopens before requests get terminated
+        :param circuit_breaker_opening_threshold: How many consecutive failures must happen before the circuit breaker
+        opens
+        :param circuit_breaker_max_reopens: How many consecutive circuit breaker reopens before requests get terminated
         """
         self.client: Optional[httpx.AsyncClient] = None
         self.semaphore = asyncio.Semaphore(max_concurrency)
@@ -63,7 +64,7 @@ class HttpxClient(ConnectorInterface, AsyncHttpClientInterface):
 
         # circuit breaker
         self.enable_circuit_breaker = enable_circuit_breaker
-        self.circuit_breaker_opening_threshold = circuit_breaker_fail_threshold
+        self.circuit_breaker_opening_threshold = circuit_breaker_opening_threshold
         self.circuit_breaker_reset_time = circuit_breaker_reset_time
         self.circuit_breaker_max_reopens = circuit_breaker_max_reopens
         self.circuit_breaker_max_wait_for_open = max_wait_for_open_circuit

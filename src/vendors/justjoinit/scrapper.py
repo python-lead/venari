@@ -1,33 +1,39 @@
 import asyncio
 from logging import Logger
 
-import httpx
-
+from connectors.http_clients.http_client_interfaces import AsyncHttpClientInterface
+from connectors.http_clients.httpx_client import HttpxClient
 from venari.models import JobOffer, JobOfferDetails
 from vendors.justjoinit.parsers import JustJoinItParser
 from vendors.scrapper_interfaces import OfferScrapperInterface
 
 
 class JustJoinItScrapper(OfferScrapperInterface):
+    """
+    JustJoinIt scrapper
+
+    todo:
+    - should support more than python jobs
+    - add exception handling support for self._fetch_content_page. Exception should terminate scrapping
+    - refactor get_offers and get_offer_details - parsers should start work as soon as the resource is fetched
+    - add tracking_id support
+    """
+
     BASE_URL = "https://justjoin.it"
-    # todo: should support more than python jobs
     _PATH = "/job-offers/all-locations/python"
 
     def __init__(
         self,
         logger: Logger,
         max_pages: int = 1,
-        timeout: float = 10.0,
-        max_retries: int = 5,
+        client: AsyncHttpClientInterface = HttpxClient,
     ):
         """
         :param max_pages: Number of pages to fetch when scraping offers
-        :param timeout: HTTP client timeout in seconds
         """
         self.logger = logger
+        self.client = client
         self.max_pages = max_pages
-        self.timeout = timeout
-        self.max_retries = max_retries
         self.offer_parser = JustJoinItParser(base_url=self.BASE_URL, logger=logger)
 
     async def get_offers(self) -> list[JobOffer]:
@@ -45,10 +51,13 @@ class JustJoinItScrapper(OfferScrapperInterface):
     async def get_offer_details(self, offer: JobOffer) -> JobOfferDetails:
         """
         Fetch and parse offer details
+
+        todo:
+        - parsing details can be done for already fetched detail pages? Keeping order might be problematic
         """
         detail_page = await self._fetch_content_page(url=str(offer.url))
         details = await self.offer_parser.parse_details(
-            content=detail_page, url=offer.url, offer=offer
+            content=detail_page, url=str(offer.url), offer=offer
         )
         details.source_url = offer.url
         return details
@@ -69,35 +78,10 @@ class JustJoinItScrapper(OfferScrapperInterface):
 
     async def _fetch_content_page(self, url: str) -> str:
         """
-        Fetches raw HTML content from the given URL with retry logic on timeout errors
-        Retries up to self.max_retries times on httpx.ReadTimeout
-        # todo: shouldn't be a scrapper method. Add client for communication in constructor
+        Fetches raw HTML content from the given URL using provided async http client
+
+        todo:
+        - shouldn't be a scrapper method. Add client for communication in constructor
         """
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                async with httpx.AsyncClient(
-                    follow_redirects=True, timeout=self.timeout
-                ) as client:
-                    response = await client.get(url)
-                    response.raise_for_status()
-                    return response.text
-
-            except (httpx.ReadTimeout, httpx.ConnectError, httpx.ConnectTimeout) as e:
-                self.logger.debug(
-                    f"Timeout while fetching URL: {url} "
-                    f"(attempt {attempt}/{self.max_retries}). "
-                    f"Error: {e}"
-                )
-
-                if attempt == self.max_retries:
-                    raise
-
-                # Throttling retry attempts
-                await asyncio.sleep(1 * attempt)
-
-            except httpx.HTTPError as e:
-                # You may choose to retry only on timeouts, not on all errors.
-                self.logger.error(
-                    f"HTTP error while fetching URL: {url}. Not retrying. Error: {e}"
-                )
-                raise
+        response = await self.client.get(url, tracking_id=None)
+        return response.text
