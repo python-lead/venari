@@ -1,6 +1,5 @@
 import asyncio
 from logging import Logger
-from time import perf_counter
 from typing import List
 
 from venari.engine_interface import EngineInterface
@@ -23,7 +22,6 @@ class Engine(EngineInterface):
         skip_details=False,
         order_offers: bool = True,
         open_offers_in_browser: bool = False,
-        display_offers: bool = False,
     ) -> None:
         self.logger = logger
         self.offer_filters: List[FilterInterface] = []
@@ -31,15 +29,13 @@ class Engine(EngineInterface):
         self._skip_details = skip_details
         self._open_offers_in_browser = open_offers_in_browser
         self._order_offers = order_offers
-        self._display_offers = display_offers
 
     async def execute(self) -> None:
         self.offers = await self._get_offers()
         self.filter_offers()
         if self._order_offers:
             self.filtered_offers = self._order_filtered_offers(self.filtered_offers)
-        if self._display_offers:
-            self.display_offers()
+        self._display_offers()
 
     async def _get_offers(self) -> list[JobOffer]:
         """
@@ -65,20 +61,15 @@ class Engine(EngineInterface):
         self.logger.info("Scrapping offer details")
         tasks = [asyncio.create_task(wrap_offers(offer)) for offer in offers]
 
-        _t1_start = perf_counter()
         complete_offers = []
         for task in asyncio.as_completed(tasks):
             offer, details = await task
             offer.details = details
             complete_offers.append(offer)
-        _t1_stop = perf_counter()
 
-        self.logger.info(
-            f"Elapsed time: {_t1_stop - _t1_start:.2f} seconds. Offers processed: {len(complete_offers)}"
-        )
         return complete_offers
 
-    def display_offers(self):
+    def _display_offers(self):
         self.logger.info(
             f"Displaying acceptable offers - "
             f"{f'{len(self.filtered_offers)} out of {len(self.offers)}' if self.filtered_offers else 'No offers'}"
