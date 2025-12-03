@@ -79,9 +79,6 @@ class JustJoinItScrapper(OfferScrapperInterface):
     async def _fetch_content_page(self, url: str) -> str:
         """
         Fetches raw HTML content from the given URL using provided async http client
-
-        todo:
-        - shouldn't be a scrapper method. Add client for communication in constructor
         """
         response = await self.client.get(url, tracking_id=None)
         return response.text
