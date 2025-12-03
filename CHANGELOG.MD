@@ -13,6 +13,9 @@
 
 # Changelog:
 
+## 0.3.1
+- Added better async http client support (HttpxClient)
+
 ## 0.3.0
 - Added logger support
 - Added basic offer ordering (descending by max salary)
